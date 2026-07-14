@@ -81,17 +81,14 @@ describe('PostHogProvider', () => {
         )
     })
 
-    it('does not pass bootstrap when bootstrapFlags is not set', async () => {
+    it('does not add bootstrap to options when bootstrapFlags is not set', async () => {
         const element = await PostHogProvider({
             apiKey: 'phc_test123',
             children: <div>Child</div>,
         })
         render(element)
-        expect(mockClientProvider).toHaveBeenCalledWith(
-            expect.objectContaining({
-                bootstrap: undefined,
-            })
-        )
+        expect(mockClientProvider.mock.calls[0][0]).not.toHaveProperty('bootstrap')
+        expect(mockClientProvider.mock.calls[0][0].options).not.toHaveProperty('bootstrap')
     })
 
     describe('Next.js client defaults', () => {
@@ -299,9 +296,37 @@ describe('PostHogProvider', () => {
             expect(mockGetAllFlagsAndPayloads).toHaveBeenCalledWith('user_abc', {})
             expect(mockClientProvider).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    bootstrap: expect.objectContaining({
-                        featureFlags: { 'flag-1': true },
-                        featureFlagPayloads: { 'flag-1': { color: 'blue' } },
+                    options: expect.objectContaining({
+                        bootstrap: expect.objectContaining({
+                            featureFlags: { 'flag-1': true },
+                            featureFlagPayloads: { 'flag-1': { color: 'blue' } },
+                        }),
+                    }),
+                })
+            )
+        })
+
+        it('prefers user-provided clientOptions.bootstrap over evaluated bootstrap data', async () => {
+            const clientBootstrap = {
+                distinctID: 'configured-distinct-id',
+                featureFlags: { 'flag-1': false, 'client-only': true },
+            }
+            const element = await PostHogProvider({
+                apiKey: 'phc_test123',
+                clientOptions: { bootstrap: clientBootstrap },
+                bootstrapFlags: true,
+                children: <div>Child</div>,
+            })
+            render(element)
+
+            expect(mockClientProvider).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    options: expect.objectContaining({
+                        bootstrap: {
+                            distinctID: 'configured-distinct-id',
+                            featureFlags: { 'flag-1': false, 'client-only': true },
+                            featureFlagPayloads: { 'flag-1': { color: 'blue' } },
+                        },
                     }),
                 })
             )
@@ -329,8 +354,10 @@ describe('PostHogProvider', () => {
             expect(mockGetAllFlagsAndPayloads).toHaveBeenCalled()
             expect(mockClientProvider).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    bootstrap: expect.objectContaining({
-                        featureFlagPayloads: { 'flag-1': { color: 'blue' } },
+                    options: expect.objectContaining({
+                        bootstrap: expect.objectContaining({
+                            featureFlagPayloads: { 'flag-1': { color: 'blue' } },
+                        }),
                     }),
                 })
             )
@@ -364,11 +391,8 @@ describe('PostHogProvider', () => {
             })
             render(element)
 
-            expect(mockClientProvider).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    bootstrap: undefined,
-                })
-            )
+            expect(mockClientProvider.mock.calls[0][0]).not.toHaveProperty('bootstrap')
+            expect(mockClientProvider.mock.calls[0][0].options).not.toHaveProperty('bootstrap')
             expect(warnSpy).toHaveBeenCalledWith(
                 '[PostHog Next.js] Failed to evaluate bootstrap flags:',
                 expect.any(Error)
@@ -436,7 +460,8 @@ describe('PostHogProvider', () => {
             render(element)
 
             expect(mockGetAllFlagsAndPayloads).not.toHaveBeenCalled()
-            expect(mockClientProvider).toHaveBeenCalledWith(expect.objectContaining({ bootstrap: undefined }))
+            expect(mockClientProvider.mock.calls[0][0]).not.toHaveProperty('bootstrap')
+            expect(mockClientProvider.mock.calls[0][0].options).not.toHaveProperty('bootstrap')
         })
 
         it('evaluates flags when consent cookie is 1', async () => {
@@ -469,7 +494,8 @@ describe('PostHogProvider', () => {
             render(element)
 
             expect(mockGetAllFlagsAndPayloads).not.toHaveBeenCalled()
-            expect(mockClientProvider).toHaveBeenCalledWith(expect.objectContaining({ bootstrap: undefined }))
+            expect(mockClientProvider.mock.calls[0][0]).not.toHaveProperty('bootstrap')
+            expect(mockClientProvider.mock.calls[0][0].options).not.toHaveProperty('bootstrap')
         })
 
         it('evaluates flags when no consent cookie and opt_out_capturing_by_default is false (default)', async () => {

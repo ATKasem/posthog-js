@@ -1,7 +1,6 @@
 import React from 'react'
-import type { PostHogConfig } from 'posthog-js'
+import type { BootstrapConfig, PostHogConfig } from 'posthog-js'
 import { ClientPostHogProvider } from '../client/ClientPostHogProvider.js'
-import type { BootstrapConfig } from '../client/ClientPostHogProvider.js'
 import { cookies } from 'next/headers.js'
 import type { PostHogOptions } from 'posthog-node'
 import { getOrCreateNodeClient } from '../server/clientCache.node.js'
@@ -103,6 +102,7 @@ export async function PostHogProvider({
             // If evaluateFlags returned undefined (no cookie, opted-out), the client
             // still needs to fetch flags on first load.
             if (bootstrap) {
+                resolvedOptions.bootstrap = { ...bootstrap, ...resolvedOptions.bootstrap }
                 resolvedOptions.advanced_disable_feature_flags_on_first_load = true
             }
         } catch (error) {
@@ -112,7 +112,7 @@ export async function PostHogProvider({
     }
 
     return (
-        <ClientPostHogProvider apiKey={apiKey} options={resolvedOptions} bootstrap={bootstrap}>
+        <ClientPostHogProvider apiKey={apiKey} options={resolvedOptions}>
             {children}
         </ClientPostHogProvider>
     )
